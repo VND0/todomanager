@@ -1,0 +1,24 @@
+{
+    "name": "TODOManager",
+    "version": "0.0.1",
+    "scripts": {
+        "compile": "tsc -p ./"
+    },
+    "main": "./out/extension.js",
+    "engines": {
+        "vscode": "^1.105.0"
+    },
+    "contributes": {
+        "commands": [
+            {
+                "command": "hello.world",
+                "title": "Show 'Hello world' message"
+            }
+        ]
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.138.0",
+        "@types/node": "^26.6.2",
+        "typescript": "^7.0.2"
+    }
+}
