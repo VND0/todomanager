@@ -1,5 +1,7 @@
 {
-    "name": "TODOManager",
+    "name": "todo-manager",
+    "displayName": "TODO Manager",
+    "description": "Find and navigate TODO comments in your workspace.",
     "version": "0.0.1",
     "scripts": {
         "compile": "tsc -p ./"
@@ -9,10 +11,47 @@
         "vscode": "^1.105.0"
     },
     "contributes": {
+        "views": {
+            "todo-manager": [
+                {
+                    "id": "todo-list",
+                    "name": "List",
+                    "icon": "resources/todo-manager.svg"
+                }
+            ]
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "todo-manager",
+                    "title": "TODO manager",
+                    "icon": "resources/todo-manager.svg"
+                }
+            ]
+        },
         "commands": [
             {
-                "command": "hello.world",
-                "title": "Show 'Hello world' message"
+                "command": "todo-manager.refresh",
+                "title": "Refresh TODOs",
+                "icon": {
+                    "light": "resources/refresh_light.svg",
+                    "dark": "resources/refresh_dark.svg"
+                }
+            }
+        ],
+        "menus": {
+            "view/title": [
+                {
+                    "command": "todo-manager.refresh",
+                    "when": "view == todo-list",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "viewsWelcome": [
+            {
+                "view": "todo-list",
+                "contents": "Open a folder to view TODOs. Only sigle root workspaces are supported."
             }
         ]
     },
