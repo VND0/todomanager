@@ -1,175 +1,8 @@
 import * as vscode from "vscode"
-import * as fs from "fs"
-import * as readline from "readline"
-import path from "path"
+import * as path from "path"
+import { FileWithTodo, TodoComment } from "./treeObjects"
+import { getLinesWithTodo } from "./fileTools"
 
-const singleLineCommentPrefixes: Record<string, string> = {
-    // C-подобные
-    '.c': '//',
-    '.h': '//',
-    '.cpp': '//',
-    '.hpp': '//',
-    '.cc': '//',
-    '.cs': '//',
-    '.java': '//',
-    '.kt': '//',
-    '.kts': '//',
-    '.scala': '//',
-    '.go': '//',
-    '.rs': '//',
-    '.swift': '//',
-    '.dart': '//',
-    '.zig': '//',
-    '.sol': '//',
-    '.groovy': '//',
-    '.gradle': '//',
-    '.v': '//',
-    '.sv': '//',
-    '.proto': '//',
-    '.gleam': '//',
-
-    // JavaScript / TypeScript
-    '.js': '//',
-    '.jsx': '//',
-    '.mjs': '//',
-    '.cjs': '//',
-    '.ts': '//',
-    '.tsx': '//',
-    '.mts': '//',
-    '.cts': '//',
-    '.vue': '//',
-    '.svelte': '//',
-
-    // Python и скрипты с #
-    '.py': '#',
-    '.pyw': '#',
-    '.rb': '#',
-    '.pl': '#',
-    '.pm': '#',
-    '.r': '#',
-    '.jl': '#',
-    '.sh': '#',
-    '.bash': '#',
-    '.zsh': '#',
-    '.fish': '#',
-    '.ps1': '#',
-    '.psm1': '#',
-    '.php': '//',
-    '.coffee': '#',
-    '.cr': '#',
-    '.ex': '#',
-    '.exs': '#',
-    '.nim': '#',
-    '.tcl': '#',
-    '.nix': '#',
-    '.tf': '#',
-    '.hcl': '#',
-    '.graphql': '#',
-    '.gql': '#',
-    '.yaml': '#',
-    '.yml': '#',
-    '.toml': '#',
-    '.conf': '#',
-    '.ini': ';',
-    '.dockerfile': '#',
-    '.mk': '#',
-    '.cmake': '#',
-    '.env': '#',
-
-    // Lisp-подобные
-    '.lisp': ';',
-    '.cl': ';',
-    '.el': ';',
-    '.clj': ';',
-    '.cljs': ';',
-    '.scm': ';',
-    '.rkt': ';',
-
-    // SQL, Haskell и т.п.
-    '.sql': '--',
-    '.hs': '--',
-    '.lhs': '--',
-    '.lua': '--',
-    '.elm': '--',
-    '.purs': '--',
-    '.ada': '--',
-    '.adb': '--',
-    '.ads': '--',
-    '.vhd': '--',
-    '.vhdl': '--',
-
-    // Матричные / научные
-    '.m': '%',
-    '.tex': '%',
-    '.sty': '%',
-    '.pro': '%',
-    '.erl': '%',
-    '.hrl': '%',
-
-    // Ассемблер
-    '.asm': ';',
-    '.s': ';',
-
-    // Остальные
-    '.f90': '!',
-    '.f95': '!',
-    '.f': '!',
-    '.for': '!',
-    '.vb': "'",
-    '.bas': "'",
-    '.bat': 'REM',
-    '.cmd': 'REM',
-    '.vim': '"',
-    '.erb': '#',
-    '.pas': '//',
-    '.dpr': '//',
-    '.f#': '//',
-    '.fs': '//',
-    '.fsx': '//',
-    '.fsi': '//',
-    '.res': '//',
-};
-
-function getCommentPrefix(filename: string): string | undefined {
-    for (const ext of Object.keys(singleLineCommentPrefixes)) {
-        if (filename.toLowerCase().endsWith(ext)) {
-            return singleLineCommentPrefixes[ext]
-        }
-    }
-    return undefined
-}
-
-function escapeRegExp(s: string): string {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-class FileWithTodo extends vscode.TreeItem {
-    constructor(
-        public readonly relPath: string,
-        public readonly collapsibleState: vscode.TreeItemCollapsibleState
-    ) {
-        super(relPath, collapsibleState)
-        this.iconPath = new vscode.ThemeIcon("file-code")
-    }
-}
-
-class TodoComment extends vscode.TreeItem {
-    constructor(
-        public readonly relPath: string,
-        public readonly lineNumber: number,
-        public readonly commentText: string,
-        public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-    ) {
-        super(commentText.substring(0, 80), collapsibleState)
-        this.description = `Line ${this.lineNumber}`
-
-        this.command = {
-            command: "todo-manager.openFileAtLine",
-            title: "Go to",
-            arguments: [relPath, lineNumber]
-        }
-    }
-}
 
 export class TodoTreeDataProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | null | void> = new vscode.EventEmitter<vscode.TreeItem | undefined | null | void>();
@@ -181,33 +14,6 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<vscode.Tree
 
     private todoComments: Record<string, TodoComment[]> = {}
     private todoFiles: Record<string, FileWithTodo> = {}
-
-    private async getLinesWithTodo(path: any): Promise<TodoComment[]> {
-        const reader = readline.createInterface({
-            input: fs.createReadStream(path, "utf-8"),
-            crlfDelay: Infinity
-        })
-
-        const commentPrefix = getCommentPrefix(path)
-        if (commentPrefix === undefined) {
-            return []
-        }
-
-        const re = new RegExp(`${escapeRegExp(commentPrefix)} ?TODO: ?.+$`)
-
-        const todos: TodoComment[] = []
-        let lineNumber = 0
-        for await (const line of reader) {
-            ++lineNumber
-
-            const match = line.match(re)
-            if (match === null) {
-                continue
-            }
-            todos.push(new TodoComment(path, lineNumber, match[0], vscode.TreeItemCollapsibleState.None))
-        }
-        return todos
-    }
 
     getChildren(element?: FileWithTodo | undefined): vscode.ProviderResult<vscode.TreeItem[]> {
         const openedFolders = vscode.workspace.workspaceFolders
@@ -221,7 +27,7 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<vscode.Tree
                     const filename = vscode.workspace.asRelativePath(uri)
 
                     const file = new FileWithTodo(filename, vscode.TreeItemCollapsibleState.Collapsed)
-                    const todoComments = await this.getLinesWithTodo(path.join(openedFolders[0].uri.fsPath, file.relPath))
+                    const todoComments = await getLinesWithTodo(path.join(openedFolders[0].uri.fsPath, file.relPath))
 
                     if (todoComments.length === 0) {
                         return null
@@ -259,9 +65,10 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
         "todo-manager.openFileAtLine",
         async (relPath: string, lineNumber: number) => {
-            const uri = vscode.Uri.file(relPath)
-            const doc = await vscode.workspace.openTextDocument(uri)
-            const editor = await vscode.window.showTextDocument(doc, { preview: true })
+            const editor = await vscode.window.showTextDocument(
+                await vscode.workspace.openTextDocument(vscode.Uri.file(relPath)),
+                { preview: true }
+            )
 
             const pos = new vscode.Position(lineNumber - 1, 0)
             editor.selection = new vscode.Selection(pos, pos)
