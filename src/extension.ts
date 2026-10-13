@@ -149,15 +149,25 @@ class FileWithTodo extends vscode.TreeItem {
         public readonly collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(relPath, collapsibleState)
+        this.iconPath = new vscode.ThemeIcon("file-code")
     }
 }
 
 class TodoComment extends vscode.TreeItem {
     constructor(
+        public readonly relPath: string,
+        public readonly lineNumber: number,
         public readonly commentText: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     ) {
         super(commentText.substring(0, 80), collapsibleState)
+        this.description = `Line ${this.lineNumber}`
+
+        this.command = {
+            command: "todo-manager.openFileAtLine",
+            title: "Go to",
+            arguments: [relPath, lineNumber]
+        }
     }
 }
 
@@ -183,7 +193,7 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<vscode.Tree
             return []
         }
 
-        const re = new RegExp(`${escapeRegExp(commentPrefix)} ?TODO: (.+)$`)
+        const re = new RegExp(`${escapeRegExp(commentPrefix)} ?TODO: ?.+$`)
 
         const todos: TodoComment[] = []
         let lineNumber = 0
@@ -194,7 +204,7 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<vscode.Tree
             if (match === null) {
                 continue
             }
-            todos.push(new TodoComment(match[1], vscode.TreeItemCollapsibleState.None))
+            todos.push(new TodoComment(path, lineNumber, match[0], vscode.TreeItemCollapsibleState.None))
         }
         return todos
     }
@@ -246,4 +256,19 @@ export async function activate(context: vscode.ExtensionContext) {
         treeDataProvider: exampleDataProvider
     })
     vscode.commands.registerCommand("todo-manager.refresh", () => exampleDataProvider.refresh())
+    vscode.commands.registerCommand(
+        "todo-manager.openFileAtLine",
+        async (relPath: string, lineNumber: number) => {
+            const uri = vscode.Uri.file(relPath)
+            const doc = await vscode.workspace.openTextDocument(uri)
+            const editor = await vscode.window.showTextDocument(doc, { preview: true })
+
+            const pos = new vscode.Position(lineNumber - 1, 0)
+            editor.selection = new vscode.Selection(pos, pos)
+            editor.revealRange(
+                new vscode.Range(pos, pos),
+                vscode.TextEditorRevealType.InCenter
+            )
+        }
+    )
 }
