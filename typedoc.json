@@ -1,0 +1,10 @@
+{
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "plugin": ["typedoc-plugin-markdown"],
+  "out": "docs",
+  "excludePrivate": true,
+  "readme": "none",
+  "excludeNotDocumented": true,
+  "flattenOutputFiles": true,
+}
