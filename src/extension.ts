@@ -3,6 +3,11 @@ import * as path from "path"
 import { FileWithTodo, TodoComment } from "./treeObjects"
 import { getLinesWithTodo } from "./fileTools"
 
+/**
+ * Processes the list of search exclusions set in settings
+ * 
+ * @returns `string` with exclusions for vscode api or `undefined` if they aren't set
+ */
 function buildExcludePattern(): string | undefined {
     const config = vscode.workspace.getConfiguration("todo-manager")
     const patterns = config.get<string[]>('excludePatterns', [])
@@ -12,7 +17,9 @@ function buildExcludePattern(): string | undefined {
     }
     return `{${patterns.join(',')}}`;
 }
-
+/**
+ * The class that provides data about the extension's tree view.
+ */
 export class TodoTreeDataProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | null | void> = new vscode.EventEmitter<vscode.TreeItem | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
@@ -21,9 +28,21 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<vscode.Tree
         this._onDidChangeTreeData.fire()
     }
 
+    /**
+     * filename -> comment[]
+     */
     private todoComments: Record<string, TodoComment[]> = {}
+    /**
+     * filename -> TreeItem of this file
+     */
     private todoFiles: Record<string, FileWithTodo> = {}
 
+    /**
+     * Method providing children of the given TreeItem or top-level items for vscode api
+     * 
+     * @param element Parent FileWithTodo for TodoComments or undefined when providing the list of files
+     * @returns List of files or comments
+     */
     getChildren(element?: FileWithTodo | undefined): vscode.ProviderResult<vscode.TreeItem[]> {
         const openedFolders = vscode.workspace.workspaceFolders
         if (openedFolders === undefined || openedFolders.length != 1) {
@@ -60,12 +79,21 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<vscode.Tree
         }
     }
 
+    /**
+     * Generic method to implement the interface
+     * 
+     * @param element Some vscode.TreeItem
+     * @returns vscode.TreeItem itself
+     */
     getTreeItem(element: vscode.TreeItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
         return element
     }
 }
 
-export async function activate(context: vscode.ExtensionContext) {
+/**
+ * Function that activates the extension
+ */
+export async function activate(_: vscode.ExtensionContext) {
     const exampleDataProvider = new TodoTreeDataProvider()
     vscode.window.createTreeView("todo-list", {
         treeDataProvider: exampleDataProvider

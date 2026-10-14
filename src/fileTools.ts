@@ -3,6 +3,9 @@ import * as fs from "fs"
 import * as readline from "readline"
 import { TodoComment } from "./treeObjects"
 
+/**
+ * Hardcoded list matching `language -> comment prefix`
+ */
 const singleLineCommentPrefixes: Record<string, string> = {
     '.c': '//',
     '.h': '//',
@@ -121,6 +124,11 @@ const singleLineCommentPrefixes: Record<string, string> = {
     '.res': '//',
 };
 
+/**
+ * 
+ * @param filename String used to extract the extension
+ * @returns Comment prefix of `undefined` if the language is not recognized
+ */
 function getCommentPrefix(filename: string): string | undefined {
     for (const ext of Object.keys(singleLineCommentPrefixes)) {
         if (filename.toLowerCase().endsWith(ext)) {
@@ -130,10 +138,22 @@ function getCommentPrefix(filename: string): string | undefined {
     return undefined
 }
 
+/**
+ * Inserts '\' before any char which is a keyword in the syntax of regular expressions
+ * 
+ * @param s Raw string
+ * @returns String which is safe to be substituted to a regexp
+ */
 function escapeRegExp(s: string): string {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Reads file and finds all TODO comments
+ * 
+ * @param path 
+ * @returns An array with comments as tree objects
+ */
 export async function getLinesWithTodo(path: any): Promise<TodoComment[]> {
     const reader = readline.createInterface({
         input: fs.createReadStream(path, "utf-8"),
