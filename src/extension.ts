@@ -3,6 +3,15 @@ import * as path from "path"
 import { FileWithTodo, TodoComment } from "./treeObjects"
 import { getLinesWithTodo } from "./fileTools"
 
+function buildExcludePattern(): string | undefined {
+    const config = vscode.workspace.getConfiguration("todo-manager")
+    const patterns = config.get<string[]>('excludePatterns', [])
+
+    if (patterns.length === 0) {
+        return undefined;
+    }
+    return `{${patterns.join(',')}}`;
+}
 
 export class TodoTreeDataProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | null | void> = new vscode.EventEmitter<vscode.TreeItem | undefined | null | void>();
@@ -22,7 +31,7 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<vscode.Tree
         }
 
         if (element === undefined) {
-            return vscode.workspace.findFiles("**/*").then(async (uris) => {
+            return vscode.workspace.findFiles("**/*", buildExcludePattern()).then(async (uris) => {
                 const files = await Promise.all(uris.map(async (uri) => {
                     const filename = vscode.workspace.asRelativePath(uri)
 

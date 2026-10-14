@@ -51,12 +51,31 @@
         "viewsWelcome": [
             {
                 "view": "todo-list",
-                "contents": "Open a folder to view TODOs. Only sigle root workspaces are supported."
+                "contents": "Open a folder to view TODOs. Only sigle root workspaces are supported.\n\nIf you still see this text, maybe there are no TODOs in your project. Congrats!"
+            }
+        ],
+        "configuration": [
+            {
+                "title": "TODO manager",
+                "properties": {
+                    "todo-manager.excludePatterns": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": [
+                            "**/node_modules/**",
+                            "**/.git/**",
+                            "**/dist/**"
+                        ],
+                        "description": "Glob-templates of the files to be excluded from the search"
+                    }
+                }
             }
         ]
     },
     "devDependencies": {
-        "@types/vscode": "^1.138.0",
+        "@types/vscode": "^1.105.0",
         "@types/node": "^26.6.2",
         "typescript": "^7.0.2"
     }
